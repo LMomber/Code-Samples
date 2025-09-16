@@ -1,0 +1,39 @@
+#version 460 core
+
+#extension GL_NV_uniform_buffer_std430_layout : enable
+#extension GL_GOOGLE_include_directive : require
+
+#include "locations.glsl"
+
+struct DrawArraysIndirectCommand 
+{
+    uint count;
+    uint instanceCount;
+    uint first;
+    uint baseInstance;
+};
+
+layout(local_size_x = 1) in;
+
+// Atomic counter holding total particle count from first pass
+layout(std430, binding = COUNTER_SSBO_LOCATION) readonly buffer ParticleCounter 
+{
+    uint particleCount;
+};
+
+// Indirect draw command buffer
+layout(std430, binding = INDIRECT_SSBO_LOCATION) writeonly buffer IndirectDrawCommand 
+{
+    DrawArraysIndirectCommand command;
+};
+
+void main() 
+{
+    if (gl_GlobalInvocationID.x == 0) 
+    {
+        command.count = 4;
+        command.instanceCount = particleCount;
+        command.first = 0;
+        command.baseInstance = 0;
+    }
+}

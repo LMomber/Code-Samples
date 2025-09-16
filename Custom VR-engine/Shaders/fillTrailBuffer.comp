@@ -1,0 +1,190 @@
+#version 460 core
+
+#extension GL_NV_uniform_buffer_std430_layout : enable
+#extension GL_GOOGLE_include_directive : require
+
+#include "locations.glsl"
+
+#define MAX_PARTICLES_PER_SEGMENT 256
+
+struct trail_struct  // 96, 16 byte alligned
+{
+    mat4 world;     // 64
+    vec4 color;     // 16
+    vec2 size;      // 8
+    float currentTime;  // 4
+    float maxLifetime;  // 4
+};
+
+struct noise_parameters // 28, 8 byte aligned
+{
+    float amplitude; // 4
+    float frequency; // 4
+    float scale;     // 4
+    float lacunarity;// 4
+    float gain;      // 4
+    int octaves;     // 4
+    uint useNoise;   // 4
+};
+
+layout(local_size_x = MAX_PARTICLES_PER_SEGMENT) in; // max amount of particles per segment
+
+// Atomic counter to track total particles (across all trails)
+layout(std430, binding = COUNTER_SSBO_LOCATION) buffer ParticleCounter 
+{
+    uint particleCount;
+};
+
+layout(std430, binding = SEGMENT_SSBO_LOCATION) readonly buffer SegmentSSBO 
+{
+    trail_struct segments[];
+};
+
+// Output trail particle positions
+layout(std430, binding = TRAIL_SSBO_LOCATION) writeonly buffer TrailParticles 
+{
+    trail_struct particles[];
+};
+
+layout(std430, binding = TRAIL_NOISE_SSBO_LOCATION) buffer TrailNoise 
+{
+    noise_parameters noiseParameters[];
+};
+
+mat4 TranslationMatrix(vec3 pos) 
+{
+    return mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        pos.x, pos.y, pos.z, 1.0
+    );
+}
+
+vec3 ExtractTranslation(mat4 worldMatrix)
+{
+    return worldMatrix[3].xyz;
+}
+
+// Mostly ChatGPT
+vec3 Quintic(vec3 x) 
+{
+  return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+}
+
+float WhiteNoise3x1(vec3 p) 
+{
+  return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
+float ValueNoiseFn(vec3 uv) 
+{
+  vec3 gridUv = fract(uv);
+  vec3 gridId = floor(uv);
+
+  gridUv = Quintic(gridUv);
+
+  float c000 = WhiteNoise3x1(gridId);
+  float c100 = WhiteNoise3x1(gridId + vec3(1, 0, 0));
+  float c010 = WhiteNoise3x1(gridId + vec3(0, 1, 0));
+  float c110 = WhiteNoise3x1(gridId + vec3(1, 1, 0));
+  float c001 = WhiteNoise3x1(gridId + vec3(0, 0, 1));
+  float c101 = WhiteNoise3x1(gridId + vec3(1, 0, 1));
+  float c011 = WhiteNoise3x1(gridId + vec3(0, 1, 1));
+  float c111 = WhiteNoise3x1(gridId + vec3(1, 1, 1));
+
+  float x00 = mix(c000, c100, gridUv.x);
+  float x10 = mix(c010, c110, gridUv.x);
+  float x01 = mix(c001, c101, gridUv.x);
+  float x11 = mix(c011, c111, gridUv.x);
+
+  float y0 = mix(x00, x10, gridUv.y);
+  float y1 = mix(x01, x11, gridUv.y);
+
+  return mix(y0, y1, gridUv.z);
+}
+
+float FBM(vec3 uv, int octaves, float lacunarity, float gain, float amplitude, float frequency) 
+{
+    float sum = 0.0;
+    float maxAmplitude = 0.0;
+
+    for (int i = 0; i < octaves; ++i) 
+    {
+        sum += amplitude * ValueNoiseFn(uv * frequency);
+        maxAmplitude += amplitude;
+        amplitude *= gain;       // usually < 1, e.g., 0.5
+        frequency *= lacunarity; // usually > 1, e.g., 2.0
+    }
+
+    return sum / maxAmplitude;  // normalize result to [0,1]
+}
+
+vec3 NoiseDisplace(vec3 worldPos, int octaves, float lacunarity, float gain, float amplitude, float frequency, float scale) 
+{
+    vec3 p = worldPos * scale;
+
+    float nx = FBM(p + vec3(37.0, 0.0, 0.0), octaves, lacunarity, gain, amplitude, frequency);
+    float ny = FBM(p + vec3(0.0, 73.0, 0.0), octaves, lacunarity, gain, amplitude, frequency);
+    float nz = FBM(p + vec3(0.0, 0.0, 91.0), octaves, lacunarity, gain, amplitude, frequency);
+
+    // Maybe remap from [0,1] to [-1,1] ? 
+    vec3 offset = vec3(nx, ny, nz) * 2.0 - 1.0;
+
+    return offset;
+}
+//
+
+float BellCurve(float x) 
+{
+    return exp(-pow((x - 0.5) * 0.6, 2.0));
+}
+
+
+uniform uint particlesPerSegment;
+uniform uint segmentsPerTrail;
+uniform uint globalSegmentOffset;
+uniform uint currentTrailIndex;
+
+void main() 
+{
+    // If the thread ID is higher than particlesPerSegment, return.
+    uint localID = gl_LocalInvocationID.x;
+    if (localID >= uint(particlesPerSegment)) return;
+
+    uint localSegmentIndex = gl_WorkGroupID.x;
+    uint globalSegmentIndex = localSegmentIndex + globalSegmentOffset;  
+
+    // Skip on the last segment, so that there's no particles drawn from trail_1_segment_last to trail_2_segment_first
+    if ((localSegmentIndex + 1) >= segmentsPerTrail) 
+    {
+        return;
+    }
+
+    uint globalParticleIndex = atomicAdd(particleCount, 1);
+
+    int octaves = noiseParameters[currentTrailIndex].octaves;
+    float lacunarity = noiseParameters[currentTrailIndex].lacunarity;
+    float gain = noiseParameters[currentTrailIndex].gain;
+    float amplitude = noiseParameters[currentTrailIndex].amplitude;
+    float frequency = noiseParameters[currentTrailIndex].frequency;
+    float scale = noiseParameters[currentTrailIndex].scale;
+    
+    float noiseStrength1 = BellCurve(segments[globalSegmentIndex].currentTime / segments[globalSegmentIndex].maxLifetime);
+    float noiseStrength2 = BellCurve(segments[globalSegmentIndex+1].currentTime / segments[globalSegmentIndex+1].maxLifetime);
+
+    bool useNoise = noiseParameters[currentTrailIndex].useNoise == 1;
+    
+    // Use globalSegmentIndex for accessing segments array
+    vec3 startWorld = ExtractTranslation(segments[globalSegmentIndex].world);
+    vec3 startPos = useNoise ? startWorld + (noiseStrength1 * NoiseDisplace(startWorld, octaves, lacunarity, gain, amplitude, frequency, scale)) : startWorld;
+    vec3 endWorld = ExtractTranslation(segments[globalSegmentIndex+1].world);
+    vec3 endPos = useNoise ? endWorld + (noiseStrength2 * NoiseDisplace(endWorld, octaves, lacunarity, gain, amplitude, frequency, scale)): endWorld;
+
+    float t = float(localID) / float(particlesPerSegment - 1);
+    vec3 interpPos = mix(startPos, endPos, t);
+
+    particles[globalParticleIndex].world = TranslationMatrix(interpPos);
+    particles[globalParticleIndex].color = mix(segments[globalSegmentIndex].color, segments[globalSegmentIndex+1].color, t);
+    particles[globalParticleIndex].size = mix(segments[globalSegmentIndex].size, segments[globalSegmentIndex+1].size, t);
+}
