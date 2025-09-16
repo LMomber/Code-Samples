@@ -1,7 +1,7 @@
 #include "pch_dx12.hpp"
 #include "heap_dx12.hpp"
 
-bee::Heap::Heap(LPCWSTR name, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+Heap::Heap(LPCWSTR name, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
 {
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.NumDescriptors = numDescriptors;
@@ -16,7 +16,7 @@ bee::Heap::Heap(LPCWSTR name, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE ty
         Engine.Device().GetD3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE bee::Heap::CreateSRV(ComPtr<ID3D12Resource>& resource,
+D3D12_CPU_DESCRIPTOR_HANDLE Heap::CreateSRV(ComPtr<ID3D12Resource>& resource,
                                                  UINT numElements,
                                                  UINT elementSize,
                                                  UINT64 firstElement)
@@ -38,7 +38,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE bee::Heap::CreateSRV(ComPtr<ID3D12Resource>& resourc
     return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE bee::Heap::CreateUAV(ComPtr<ID3D12Resource>& resource,
+D3D12_CPU_DESCRIPTOR_HANDLE Heap::CreateUAV(ComPtr<ID3D12Resource>& resource,
                                                  UINT numElements,
                                                  UINT elementSize,
                                                  UINT64 firstElement)
@@ -61,7 +61,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE bee::Heap::CreateUAV(ComPtr<ID3D12Resource>& resourc
 }
 
 // Works only for the first CBV in the heap, since it doesn't increment the handle
-D3D12_CPU_DESCRIPTOR_HANDLE bee::Heap::CreateCBV(ComPtr<ID3D12Resource>& resource, UINT sizeInBytes)
+D3D12_CPU_DESCRIPTOR_HANDLE Heap::CreateCBV(ComPtr<ID3D12Resource>& resource, UINT sizeInBytes)
 {
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
     cbvDesc.BufferLocation = resource->GetGPUVirtualAddress();

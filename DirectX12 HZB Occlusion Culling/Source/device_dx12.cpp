@@ -1,3 +1,27 @@
+// Changed and added upon:
+
+/*
+ *  Copyright(c) 2020 Jeremiah van Oosten
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files(the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions :
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ *  IN THE SOFTWARE.
+ */
+
 #include "pch_dx12.hpp"
 #include "device_dx12.hpp"
 
@@ -5,25 +29,14 @@
 #include "dxgidebug.h"
 #endif
 
-//#include <dx12lib/GUI.h>
-//#include <dx12lib/Scene.h>
-
 using namespace bee;
 
 #pragma region Class adapters for std::make_shared
 
-//class MakeGUI : public GUI
-//{
-//public:
-//    MakeGUI(Device& device, HWND hWnd, const RenderTarget& renderTarget) : GUI(device, hWnd, renderTarget) {}
-//
-//    virtual ~MakeGUI() {}
-//};
-
 class MakeUnorderedAccessView : public UnorderedAccessView
 {
 public:
-    MakeUnorderedAccessView(bee::Device& device,
+    MakeUnorderedAccessView(Device& device,
                             const std::shared_ptr<DX12Resource>& resource,
                             const std::shared_ptr<DX12Resource>& counterResource,
                             const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav)
@@ -37,7 +50,7 @@ public:
 class MakeShaderResourceView : public ShaderResourceView
 {
 public:
-    MakeShaderResourceView(bee::Device& device,
+    MakeShaderResourceView(Device& device,
                            const std::shared_ptr<DX12Resource>& resource,
                            const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
         : ShaderResourceView(device, resource, srv)
@@ -50,7 +63,7 @@ public:
 class MakeConstantBufferView : public ConstantBufferView
 {
 public:
-    MakeConstantBufferView(bee::Device& device, const std::shared_ptr<ConstantBuffer>& constantBuffer, size_t offset)
+    MakeConstantBufferView(Device& device, const std::shared_ptr<ConstantBuffer>& constantBuffer, size_t offset)
         : ConstantBufferView(device, constantBuffer, offset)
     {
     }
@@ -61,7 +74,7 @@ public:
 class MakePipelineStateObject : public PipelineStateObject
 {
 public:
-    MakePipelineStateObject(bee::Device& device, const D3D12_PIPELINE_STATE_STREAM_DESC& desc)
+    MakePipelineStateObject(Device& device, const D3D12_PIPELINE_STATE_STREAM_DESC& desc)
         : PipelineStateObject(device, desc)
     {
     }
@@ -71,7 +84,7 @@ public:
 class MakeRootSignature : public RootSignature
 {
 public:
-    MakeRootSignature(bee::Device& device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
+    MakeRootSignature(Device& device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
         : RootSignature(device, rootSignatureDesc)
     {
     }
@@ -82,12 +95,12 @@ public:
 class MakeTexture : public DX12Texture
 {
 public:
-    MakeTexture(bee::Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
+    MakeTexture(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
         : DX12Texture(device, resourceDesc, clearValue)
     {
     }
 
-    MakeTexture(bee::Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue)
+    MakeTexture(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue)
         : DX12Texture(device, resource, clearValue)
     {
     }
@@ -98,12 +111,12 @@ public:
 class MakeStructuredBuffer : public StructuredBuffer
 {
 public:
-    MakeStructuredBuffer(bee::Device& device, size_t numElements, size_t elementSize)
+    MakeStructuredBuffer(Device& device, size_t numElements, size_t elementSize)
         : StructuredBuffer(device, numElements, elementSize)
     {
     }
 
-    MakeStructuredBuffer(bee::Device& device, ComPtr<ID3D12Resource> resource, size_t numElements, size_t elementSize)
+    MakeStructuredBuffer(Device& device, ComPtr<ID3D12Resource> resource, size_t numElements, size_t elementSize)
         : StructuredBuffer(device, resource, numElements, elementSize)
     {
     }
@@ -114,12 +127,12 @@ public:
 class MakeVertexBuffer : public VertexBuffer
 {
 public:
-    MakeVertexBuffer(bee::Device& device, size_t numVertices, size_t vertexStride)
+    MakeVertexBuffer(Device& device, size_t numVertices, size_t vertexStride)
         : VertexBuffer(device, numVertices, vertexStride)
     {
     }
 
-    MakeVertexBuffer(bee::Device& device, ComPtr<ID3D12Resource> resource, size_t numVertices, size_t vertexStride)
+    MakeVertexBuffer(Device& device, ComPtr<ID3D12Resource> resource, size_t numVertices, size_t vertexStride)
         : VertexBuffer(device, resource, numVertices, vertexStride)
     {
     }
@@ -130,12 +143,12 @@ public:
 class MakeIndexBuffer : public IndexBuffer
 {
 public:
-    MakeIndexBuffer(bee::Device& device, size_t numIndices, DXGI_FORMAT indexFormat)
+    MakeIndexBuffer(Device& device, size_t numIndices, DXGI_FORMAT indexFormat)
         : IndexBuffer(device, numIndices, indexFormat)
     {
     }
 
-    MakeIndexBuffer(bee::Device& device,
+    MakeIndexBuffer(Device& device,
                     Microsoft::WRL::ComPtr<ID3D12Resource> resource,
                     size_t numIndices,
                     DXGI_FORMAT indexFormat)
@@ -149,7 +162,7 @@ public:
 class MakeConstantBuffer : public ConstantBuffer
 {
 public:
-    MakeConstantBuffer(bee::Device& device, ComPtr<ID3D12Resource> resource) : ConstantBuffer(device, resource) {}
+    MakeConstantBuffer(Device& device, ComPtr<ID3D12Resource> resource) : ConstantBuffer(device, resource) {}
 
     virtual ~MakeConstantBuffer() = default;
 };
@@ -157,9 +170,9 @@ public:
 class MakeByteAddressBuffer : public ByteAddressBuffer
 {
 public:
-    MakeByteAddressBuffer(bee::Device& device, const D3D12_RESOURCE_DESC& desc) : ByteAddressBuffer(device, desc) {}
+    MakeByteAddressBuffer(Device& device, const D3D12_RESOURCE_DESC& desc) : ByteAddressBuffer(device, desc) {}
 
-    MakeByteAddressBuffer(bee::Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource)
+    MakeByteAddressBuffer(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource)
         : ByteAddressBuffer(device, resource)
     {
     }
@@ -170,7 +183,7 @@ public:
 class MakeDescriptorAllocator : public DescriptorAllocator
 {
 public:
-    MakeDescriptorAllocator(bee::Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256)
+    MakeDescriptorAllocator(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256)
         : DescriptorAllocator(device, type, numDescriptorsPerHeap)
     {
     }
@@ -181,7 +194,7 @@ public:
 class MakeSwapChain : public SwapChain
 {
 public:
-    MakeSwapChain(bee::Device& device, HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM)
+    MakeSwapChain(Device& device, HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM)
         : SwapChain(device, hWnd, backBufferFormat)
     {
     }
@@ -192,12 +205,12 @@ public:
 class MakeCommandQueue : public CommandQueue
 {
 public:
-    MakeCommandQueue(bee::Device& device, D3D12_COMMAND_LIST_TYPE type) : CommandQueue(device, type) {}
+    MakeCommandQueue(Device& device, D3D12_COMMAND_LIST_TYPE type) : CommandQueue(device, type) {}
 
     virtual ~MakeCommandQueue() {}
 };
 
-class MakeDevice : public bee::Device
+class MakeDevice : public Device
 {
 public:
     MakeDevice(std::shared_ptr<Adapter> adapter) : Device(adapter) {}
@@ -208,9 +221,9 @@ public:
 
 static void ErrorCallback(int error, const char* description) { Log::Error("Error {0}, {1}\n", error, description); }
 
-uint64_t bee::Device::GetFrameCount() const { return 0; }
+uint64_t Device::GetFrameCount() const { return 0; }
 
-void bee::Device::EnableDebugLayer()
+void Device::EnableDebugLayer()
 {
     ComPtr<ID3D12Debug> debugInterface;
     ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
@@ -218,7 +231,7 @@ void bee::Device::EnableDebugLayer()
 }
 
 #if defined(_DEBUG)
-void bee::Device::ReportLiveObjects()
+void Device::ReportLiveObjects()
 {
     IDXGIDebug1* dxgiDebug;
     DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug));
@@ -227,17 +240,17 @@ void bee::Device::ReportLiveObjects()
 }
 #endif
 
-std::shared_ptr<bee::Device> bee::Device::Create(std::shared_ptr<Adapter> adapter) { return std::make_shared<MakeDevice>(adapter); }
+std::shared_ptr<Device> Device::Create(std::shared_ptr<Adapter> adapter) { return std::make_shared<MakeDevice>(adapter); }
 
-std::wstring bee::Device::GetDescription() const { return m_Adapter->GetDescription(); }
+std::wstring Device::GetDescription() const { return m_Adapter->GetDescription(); }
 
-bee::Device::Device(std::shared_ptr<Adapter> adapter) : m_Adapter(adapter)
+Device::Device(std::shared_ptr<Adapter> adapter) : m_Adapter(adapter)
 {
     m_hInstance = GetModuleHandle(nullptr);
 
     if (!m_hInstance)
     {
-        bee::Log::Critical("Window :: Failed to retriece HINSTANCE \n");
+        Log::Critical("Window :: Failed to retriece HINSTANCE \n");
         return;
     }
 
@@ -270,10 +283,6 @@ bee::Device::Device(std::shared_ptr<Adapter> adapter) : m_Adapter(adapter)
     ComPtr<ID3D12InfoQueue> pInfoQueue;
     if (SUCCEEDED(m_d3d12Device.As(&pInfoQueue)))
     {
-        //pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-        //pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-        //pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-
         // Suppress whole categories of messages
         // D3D12_MESSAGE_CATEGORY Categories[] = {};
 
@@ -293,8 +302,6 @@ bee::Device::Device(std::shared_ptr<Adapter> adapter) : m_Adapter(adapter)
         };
 
         D3D12_INFO_QUEUE_FILTER NewFilter = {};
-        // NewFilter.DenyList.NumCategories = _countof(Categories);
-        // NewFilter.DenyList.pCategoryList = Categories;
         NewFilter.DenyList.NumSeverities = _countof(Severities);
         NewFilter.DenyList.pSeverityList = Severities;
         NewFilter.DenyList.NumIDs = _countof(DenyIds);
@@ -341,11 +348,7 @@ bee::Device::Device(std::shared_ptr<Adapter> adapter) : m_Adapter(adapter)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
-#if defined(BEE_INSPECTOR)
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-#else
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-#endif
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     m_monitor = glfwGetPrimaryMonitor();
@@ -363,12 +366,6 @@ bee::Device::Device(std::shared_ptr<Adapter> adapter) : m_Adapter(adapter)
     }
 
     m_hwnd = glfwGetWin32Window(m_window);
-
-    //m_dxgiSwapChain = CreateSwapChain();
-    //m_d3d12RTVDescriptorHeap = CreateDescriptorHeap(BufferCount, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    //m_RTVDescriptorSize = GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    //
-    //UpdateRenderTargetViews();
 }
 
 Device::~Device() {}
@@ -421,13 +418,6 @@ std::shared_ptr<SwapChain> Device::CreateSwapChain(DXGI_FORMAT backBufferFormat)
 
     return swapChain;
 }
-
-//std::shared_ptr<GUI> Device::CreateGUI(HWND hWnd, const RenderTarget& renderTarget)
-//{
-//    std::shared_ptr<GUI> gui = std::make_shared<MakeGUI>(*this, hWnd, renderTarget);
-//
-//    return gui;
-//}
 
 std::shared_ptr<ConstantBuffer> Device::CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource)
 {
@@ -593,21 +583,21 @@ DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format,
     return sampleDesc;
 }
 
-int bee::Device::GetWidth() const { return m_width; }
+int Device::GetWidth() const { return m_width; }
 
-int bee::Device::GetHeight() const { return m_height; }
+int Device::GetHeight() const { return m_height; }
 
-GLFWwindow* bee::Device::GetWindow() const { return m_window; }
+GLFWwindow* Device::GetWindow() const { return m_window; }
 
-HWND bee::Device::GetHwnd() const { return m_hwnd; }
+HWND Device::GetHwnd() const { return m_hwnd; }
 
-GLFWmonitor* bee::Device::GetMonitor() const { return m_monitor; }
+GLFWmonitor* Device::GetMonitor() const { return m_monitor; }
 
-float bee::Device::GetMonitorUIScale() const
+float Device::GetMonitorUIScale() const
 {
     float xscale = 1.0f, yscale = 1.0f;
     glfwGetMonitorContentScale(m_monitor, &xscale, &yscale);
     return xscale;
 }
 
-bool bee::Device::ShouldClose() { return glfwWindowShouldClose(m_window); }
+bool Device::ShouldClose() { return glfwWindowShouldClose(m_window); }
